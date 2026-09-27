@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 from yubal.utils.filename import (
+    build_channel_track_path,
     build_track_path,
     build_unmatched_track_path,
     build_unofficial_track_path,
@@ -982,6 +983,114 @@ class TestBuildUnofficialTrackPath:
             video_id="abc123",
         )
         assert isinstance(result, Path)
+
+
+class TestBuildChannelTrackPath:
+    """Tests for build_channel_track_path function."""
+
+    def test_docstring_example(self) -> None:
+        """Should pass docstring example."""
+        result = build_channel_track_path(
+            Path("/music"), "Some Channel", "Cool Song", "abc123"
+        )
+        assert result == Path("/music/Some Channel/Cool Song [abc123]")
+
+    def test_basic_path_construction(self) -> None:
+        """Should build complete path with all components."""
+        result = build_channel_track_path(
+            base=Path("/music"),
+            channel="Test Channel",
+            title="Test Song",
+            video_id="xyz789",
+        )
+        assert result == Path("/music/Test Channel/Test Song [xyz789]")
+
+    def test_path_structure(self) -> None:
+        """Should follow convention: base/Channel/Title [videoId]."""
+        result = build_channel_track_path(
+            base=Path("/music"),
+            channel="Some Channel",
+            title="Upload Title",
+            video_id="dQw4w9WgXcQ",
+        )
+        parts = result.parts
+        assert parts[-3] == "music"
+        assert parts[-2] == "Some Channel"
+        assert parts[-1] == "Upload Title [dQw4w9WgXcQ]"
+
+    def test_transliterates_components(self) -> None:
+        """Should transliterate channel and title with ascii_filenames."""
+        result = build_channel_track_path(
+            base=Path("/music"),
+            channel="Björk",
+            title="Jóga",
+            video_id="abc123",
+            ascii_filenames=True,
+        )
+        assert result == Path("/music/Bjork/Joga [abc123]")
+
+    def test_empty_component_fallbacks(self) -> None:
+        """Should use fallback values for empty strings."""
+        result = build_channel_track_path(
+            base=Path("/music"),
+            channel="",
+            title="",
+            video_id="abc123",
+        )
+        assert "Unknown Artist" in str(result)
+        assert "Unknown Track" in str(result)
+
+    def test_limits_filename_and_preserves_video_id_suffix(self) -> None:
+        """Should cap the title filename while keeping the video ID."""
+        result = build_channel_track_path(
+            base=Path("/music"),
+            channel="Some Channel",
+            title="B" * 300,
+            video_id="xyz789",
+        )
+
+        filename = result.name
+        assert len(filename.encode("utf-8")) <= 240
+        assert filename.endswith(" [xyz789]")
+        assert len(f"{filename}.opus".encode()) <= 255
+
+    def test_sanitizes_channel(self) -> None:
+        """Should sanitize invalid characters in channel name."""
+        result = build_channel_track_path(
+            base=Path("/music"),
+            channel="AC/DC: Official",
+            title="Song",
+            video_id="abc123",
+        )
+        channel_component = result.parts[-2]
+        for char in '/:*?"<>|':
+            assert char not in channel_component
+
+    def test_returns_path_object(self) -> None:
+        """Should return a Path object, not a string."""
+        result = build_channel_track_path(
+            base=Path("/music"),
+            channel="Channel",
+            title="Song",
+            video_id="abc123",
+        )
+        assert isinstance(result, Path)
+
+    @pytest.mark.parametrize("channel", [".", "..", "...", " .. ", "   "])
+    def test_dot_or_blank_channel_cannot_escape_base(self, channel: str) -> None:
+        """Dot-only channels must not traverse out of or into the base folder."""
+        base = Path("/music")
+        result = build_channel_track_path(base, channel, "Song", "abc123")
+        assert result == Path("/music/Unknown Artist/Song [abc123]")
+        assert result.resolve().is_relative_to(base.resolve())
+
+    @pytest.mark.parametrize(
+        "channel", ["_Playlists", "_Unmatched", "_Unofficial", "_playlists"]
+    )
+    def test_reserved_folder_names_are_not_reused(self, channel: str) -> None:
+        """Channels named like yubal's own folders get a distinct folder."""
+        result = build_channel_track_path(Path("/music"), channel, "Song", "abc123")
+        assert result.parts[-2] == f"{channel} (Channel)"
 
 
 class TestFormatPlaylistFilename:

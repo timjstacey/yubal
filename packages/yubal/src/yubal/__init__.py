@@ -51,6 +51,7 @@ from yubal.models.enums import (
     DownloadStatus,
     MatchResult,
     SkipReason,
+    UgcLayout,
     VideoType,
 )
 from yubal.models.progress import DownloadProgress, ExtractProgress, PlaylistProgress
@@ -220,6 +221,7 @@ __all__ = [
     "TrackMetadata",
     "TrackNotFoundError",
     "TrackParseError",
+    "UgcLayout",
     "UnsupportedPlaylistError",
     "UpstreamAPIError",
     "VideoType",

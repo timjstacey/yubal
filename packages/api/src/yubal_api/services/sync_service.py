@@ -21,6 +21,7 @@ from yubal import (
     PlaylistDownloadConfig,
     PlaylistProgress,
     TrackMetadata,
+    UgcLayout,
     create_playlist_downloader,
 )
 from yubal.models.enums import ContentKind
@@ -277,6 +278,7 @@ class SyncService:
     download_ugc: bool = False
     cache_path: Path | None = None
     audio_quality: int = 0
+    ugc_layout: UgcLayout = UgcLayout.UNOFFICIAL
     _codec: AudioCodec = field(init=False)
 
     def __post_init__(self) -> None:
@@ -321,6 +323,7 @@ class SyncService:
             download_ugc=self.download_ugc,
             cache_path=self.cache_path,
             audio_quality=self.audio_quality,
+            ugc_layout=self.ugc_layout,
         )
         return workflow.execute()
 
@@ -353,6 +356,7 @@ class _SyncWorkflow:
     download_ugc: bool
     cache_path: Path | None
     audio_quality: int
+    ugc_layout: UgcLayout
 
     # Workflow state
     content_info: ContentInfo | None = field(default=None, init=False)
@@ -403,6 +407,7 @@ class _SyncWorkflow:
                 ytmusic_lyrics_fallback=self.ytmusic_lyrics_fallback,
                 ascii_filenames=self.ascii_filenames,
                 download_ugc=self.download_ugc,
+                ugc_layout=self.ugc_layout,
             ),
             generate_m3u=True,
             save_cover=True,

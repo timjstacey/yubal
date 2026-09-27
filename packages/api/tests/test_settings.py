@@ -6,6 +6,7 @@ from typing import Any
 
 import pytest
 from pydantic import ValidationError
+from yubal import UgcLayout
 from yubal_api.settings import Settings
 
 # Common test paths
@@ -259,3 +260,27 @@ class TestLyricsSettings:
         monkeypatch.setenv("YUBAL_YTMUSIC_LYRICS_FALLBACK", "false")
         settings = Settings()
         assert settings.ytmusic_lyrics_fallback is False
+
+
+class TestUgcLayout:
+    """Tests for ugc_layout setting."""
+
+    def test_default_is_unofficial(self) -> None:
+        """Should default to UgcLayout.UNOFFICIAL."""
+        assert _create_settings().ugc_layout == UgcLayout.UNOFFICIAL
+
+    def test_env_override_parses_channel(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Should parse YUBAL_UGC_LAYOUT=channel to UgcLayout.CHANNEL."""
+        monkeypatch.setenv("YUBAL_ROOT", str(TEST_ROOT))
+        monkeypatch.setenv("YUBAL_UGC_LAYOUT", "channel")
+        settings = Settings()
+        assert settings.ugc_layout == UgcLayout.CHANNEL
+
+    def test_invalid_value_raises(self) -> None:
+        """Should raise ValidationError for an invalid layout value."""
+        with pytest.raises(ValidationError) as exc_info:
+            _create_settings(ugc_layout="invalid")
+
+        errors = exc_info.value.errors()
+        assert len(errors) == 1
+        assert errors[0]["loc"] == ("ugc_layout",)

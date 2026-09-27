@@ -16,7 +16,7 @@ from yubal.client import YTMusicProtocol
 from yubal.config import DownloadConfig
 from yubal.exceptions import CancellationError, DownloadError
 from yubal.models.cancel import CancelToken
-from yubal.models.enums import DownloadStatus, MatchResult, SkipReason
+from yubal.models.enums import DownloadStatus, MatchResult, SkipReason, UgcLayout
 from yubal.models.progress import DownloadProgress
 from yubal.models.results import DownloadResult
 from yubal.models.track import TrackMetadata
@@ -30,6 +30,7 @@ from yubal.services.lyrics import (
 from yubal.services.tagging_service import AudioFileTaggingService
 from yubal.utils.cover import fetch_cover
 from yubal.utils.filename import (
+    build_channel_track_path,
     build_track_path,
     build_unmatched_track_path,
     build_unofficial_track_path,
@@ -594,6 +595,9 @@ class DownloadService:
 
         Matched tracks use: base_path/Artist/YEAR - Album/NN - Title
         Unmatched tracks use: base_path/_Unmatched/Artist - Title [videoId]
+        Unofficial (UGC) tracks are routed per `config.ugc_layout`:
+        - UNOFFICIAL: base_path/_Unofficial/Artist - Title [videoId]
+        - CHANNEL: base_path/Channel/Title [videoId]
 
         The extension is added by yt-dlp during post-processing.
 
@@ -613,6 +617,14 @@ class DownloadService:
                     ascii_filenames=self._config.ascii_filenames,
                 )
             case MatchResult.UNOFFICIAL:
+                if self._config.ugc_layout == UgcLayout.CHANNEL:
+                    return build_channel_track_path(
+                        base=self._config.base_path,
+                        channel=track.primary_album_artist,
+                        title=track.title,
+                        video_id=track.video_id or "unknown",
+                        ascii_filenames=self._config.ascii_filenames,
+                    )
                 return build_unofficial_track_path(
                     base=self._config.base_path,
                     artist=track.primary_album_artist,

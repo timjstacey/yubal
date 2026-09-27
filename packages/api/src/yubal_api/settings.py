@@ -10,7 +10,7 @@ from zoneinfo import ZoneInfo
 from croniter import croniter
 from pydantic import BeforeValidator, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from yubal import AudioCodec
+from yubal import AudioCodec, UgcLayout
 
 LogLevel = Annotated[
     Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
@@ -91,7 +91,12 @@ class Settings(BaseSettings):
     # UGC settings
     download_ugc: bool = Field(
         default=False,
-        description="Download user-generated content tracks to _Unofficial",
+        description="Download user-generated content (see YUBAL_UGC_LAYOUT)",
+    )
+    ugc_layout: UgcLayout = Field(
+        default=UgcLayout.UNOFFICIAL,
+        description="UGC folder layout: unofficial (_Unofficial/) or channel"
+        " (<Channel>/)",
     )
 
     # ReplayGain settings

@@ -172,6 +172,7 @@ def create_services(repository: SubscriptionRepository) -> Services:
         apply_replaygain=settings.replaygain,
         ascii_filenames=settings.ascii_filenames,
         download_ugc=settings.download_ugc,
+        ugc_layout=settings.ugc_layout,
         subscription_service=subscription_service,
         cache_path=settings.cache_path,
         job_timeout=settings.job_timeout_seconds,

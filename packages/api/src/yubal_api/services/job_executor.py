@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 from uuid import UUID
 
-from yubal import AudioCodec, CancelToken, cleanup_part_files
+from yubal import AudioCodec, CancelToken, UgcLayout, cleanup_part_files
 
 from yubal_api.domain.enums import JobSource, JobStatus, ProgressStep
 from yubal_api.domain.job import ContentInfo, Job
@@ -53,6 +53,7 @@ class JobExecutor:
         apply_replaygain: bool = False,
         ascii_filenames: bool = False,
         download_ugc: bool = False,
+        ugc_layout: UgcLayout = UgcLayout.UNOFFICIAL,
         subscription_service: SubscriptionService | None = None,
         cache_path: Path | None = None,
         job_timeout: float = 1800,
@@ -70,7 +71,8 @@ class JobExecutor:
                 when lrclib.net has no match.
             apply_replaygain: Whether to apply ReplayGain tags using rsgain.
             ascii_filenames: Whether to transliterate unicode to ASCII in filenames.
-            download_ugc: Whether to download UGC tracks to _Unofficial folder.
+            download_ugc: Whether to download UGC (unofficial) tracks.
+            ugc_layout: Folder layout for UGC tracks (unofficial or channel).
             subscription_service: Optional service to update subscription metadata.
             cache_path: Optional directory for extraction cache.
             job_timeout: Maximum execution time per job in seconds.
@@ -85,6 +87,7 @@ class JobExecutor:
         self._apply_replaygain = apply_replaygain
         self._ascii_filenames = ascii_filenames
         self._download_ugc = download_ugc
+        self._ugc_layout = ugc_layout
         self._subscription_service = subscription_service
         self._cache_path = cache_path
         self._job_timeout = job_timeout
@@ -242,6 +245,7 @@ class JobExecutor:
                     self._download_ugc,
                     self._cache_path,
                     self._audio_quality,
+                    ugc_layout=self._ugc_layout,
                 )
                 result = await asyncio.to_thread(
                     sync_service.run,
