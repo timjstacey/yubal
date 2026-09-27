@@ -60,12 +60,23 @@ class MatchResult(StrEnum):
     Determines which folder a track is downloaded to:
     - MATCHED: Album-structured path (Artist/Year - Album/NN - Title)
     - UNMATCHED: Flat _Unmatched/ folder (OMVs with no confident album match)
-    - UNOFFICIAL: Flat _Unofficial/ folder (UGC tracks with unreliable metadata)
+    - UNOFFICIAL: UGC tracks with unreliable metadata, routed per UgcLayout
     """
 
     MATCHED = "matched"
     UNMATCHED = "unmatched"
     UNOFFICIAL = "unofficial"
+
+
+class UgcLayout(StrEnum):
+    """Folder layout for UGC (UNOFFICIAL) tracks.
+
+    - UNOFFICIAL: Flat _Unofficial/ folder (Artist - Title [videoId])
+    - CHANNEL: Per-channel folder (Channel/Title [videoId])
+    """
+
+    UNOFFICIAL = "unofficial"
+    CHANNEL = "channel"
 
 
 class ContentKind(StrEnum):

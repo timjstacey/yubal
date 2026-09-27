@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 
+from yubal.models.enums import UgcLayout
+
 
 class AudioCodec(StrEnum):
     """Supported audio output codecs."""
@@ -39,6 +41,8 @@ class DownloadConfig:
         ytmusic_lyrics_fallback: When fetch_lyrics is enabled, fall back to
             YouTube Music's lyrics if lrclib.net has no match.
         ascii_filenames: Transliterate unicode to ASCII in filenames.
+        download_ugc: Whether to download UGC (unofficial) tracks.
+        ugc_layout: Folder layout for UGC tracks (unofficial or channel).
     """
 
     base_path: Path
@@ -49,6 +53,7 @@ class DownloadConfig:
     ytmusic_lyrics_fallback: bool = True
     ascii_filenames: bool = False
     download_ugc: bool = False
+    ugc_layout: UgcLayout = UgcLayout.UNOFFICIAL
 
 
 @dataclass(frozen=True)

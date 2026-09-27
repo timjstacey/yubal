@@ -7,6 +7,9 @@ from unidecode import unidecode
 
 MAX_PATH_COMPONENT_BYTES = 240
 
+# Top-level folders yubal manages itself (compared case-insensitively)
+_RESERVED_FOLDERS = frozenset({"_playlists", "_unmatched", "_unofficial"})
+
 
 def _truncate_utf8(s: str, max_bytes: int) -> str:
     """Truncate a string to a UTF-8 byte budget without splitting characters."""
@@ -245,3 +248,52 @@ def build_unofficial_track_path(
     return _build_flat_track_path(
         base, "_Unofficial", artist, title, video_id, ascii_filenames=ascii_filenames
     )
+
+
+def build_channel_track_path(
+    base: Path,
+    channel: str,
+    title: str,
+    video_id: str,
+    *,
+    ascii_filenames: bool = False,
+) -> Path:
+    """Build a filesystem path for a UGC track grouped by uploading channel.
+
+    UGC tracks have unreliable album/artist metadata, but the uploading
+    channel name is reliable. This layout groups tracks per channel instead
+    of dumping them in a single flat folder.
+
+    Path structure: base/Channel/Title [videoId]
+
+    Args:
+        base: Base directory for downloads.
+        channel: Uploading channel name.
+        title: Track title from the video listing.
+        video_id: YouTube video ID (ensures filename uniqueness).
+        ascii_filenames: If True, transliterate unicode to ASCII.
+
+    Returns:
+        Full path to the track file (without extension).
+
+    Example:
+        >>> build_channel_track_path(
+        ...     Path("/music"), "Some Channel", "Cool Song", "abc123"
+        ... )
+        PosixPath('/music/Some Channel/Cool Song [abc123]')
+    """
+    # The channel name is uploader-controlled and becomes a directory, so
+    # reject "." / ".." (path traversal) and never merge into reserved folders.
+    safe_channel = clean_filename(channel, ascii_filenames=ascii_filenames).strip()
+    if not safe_channel.strip("."):
+        safe_channel = "Unknown Artist"
+    elif safe_channel.casefold() in _RESERVED_FOLDERS:
+        safe_channel = f"{safe_channel} (Channel)"
+    safe_channel = _limit_path_component(safe_channel)
+    safe_title = (
+        clean_filename(title, ascii_filenames=ascii_filenames) or "Unknown Track"
+    )
+    safe_video_id = clean_filename(video_id, ascii_filenames=ascii_filenames)
+    track_name = _limit_path_component_with_suffix(safe_title, f" [{safe_video_id}]")
+
+    return base / safe_channel / track_name

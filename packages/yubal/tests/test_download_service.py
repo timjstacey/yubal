@@ -11,7 +11,7 @@ from pydantic import ValidationError
 from yubal.config import AudioCodec, DownloadConfig
 from yubal.exceptions import CancellationError, DownloadError
 from yubal.models.cancel import CancelToken
-from yubal.models.enums import MatchResult, VideoType
+from yubal.models.enums import MatchResult, UgcLayout, VideoType
 from yubal.models.track import TrackMetadata
 from yubal.services.download_service import (
     DownloadResult,
@@ -397,6 +397,64 @@ class TestDownloadService:
         _, output_path = mock_downloader.downloads[0]
         assert "_Unofficial" in str(output_path)
         assert "Some User - User Upload [ugc123]" in str(output_path)
+
+    def test_download_unofficial_track_routes_to_channel_folder(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        """Should route unofficial (UGC) tracks to <Channel>/ with CHANNEL layout."""
+        config = DownloadConfig(
+            base_path=tmp_path,
+            codec=AudioCodec.OPUS,
+            quality=0,
+            quiet=True,
+            ugc_layout=UgcLayout.CHANNEL,
+        )
+        track = TrackMetadata(
+            source_video_id="ugc123",
+            omv_video_id=None,
+            atv_video_id=None,
+            title="User Upload",
+            artists=["Some Channel"],
+            album="User Upload",
+            album_artists=["Some Channel"],
+            video_type=VideoType.UGC,
+            match_result=MatchResult.UNOFFICIAL,
+        )
+        mock_downloader = MockDownloader()
+        service = DownloadService(config, mock_downloader)
+
+        result = service.download_track(track)
+
+        assert result.status == DownloadStatus.SUCCESS
+        _, output_path = mock_downloader.downloads[0]
+        assert "_Unofficial" not in str(output_path)
+        assert "Some Channel" in output_path.parts
+        assert "User Upload [ugc123]" in str(output_path)
+
+    def test_matched_track_routing_unaffected_by_ugc_layout(
+        self,
+        sample_track: TrackMetadata,
+        tmp_path: Path,
+    ) -> None:
+        """MATCHED tracks should ignore ugc_layout entirely."""
+        config = DownloadConfig(
+            base_path=tmp_path,
+            codec=AudioCodec.OPUS,
+            quality=0,
+            quiet=True,
+            ugc_layout=UgcLayout.CHANNEL,
+        )
+        mock_downloader = MockDownloader()
+        service = DownloadService(config, mock_downloader)
+
+        result = service.download_track(sample_track)
+
+        assert result.status == DownloadStatus.SUCCESS
+        _, output_path = mock_downloader.downloads[0]
+        assert "_Unofficial" not in str(output_path)
+        assert "Test Artist" in output_path.parts
+        assert "2024 - Test Album" in output_path.parts
 
     def test_track_metadata_match_result_defaults_to_matched(
         self,

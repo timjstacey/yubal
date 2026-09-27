@@ -3,7 +3,7 @@
 from pathlib import Path
 from unittest.mock import patch
 
-from yubal import AudioCodec, DownloadConfig
+from yubal import AudioCodec, CancelToken, DownloadConfig, UgcLayout
 from yubal_api.services.sync_service import SyncService
 
 
@@ -65,3 +65,32 @@ class TestSyncServiceAudioQuality:
                 config = mock_create.call_args[0][0]
                 assert config.download.quality == 3
                 assert config.download.codec == AudioCodec(codec)
+
+
+class TestSyncServiceUgcLayout:
+    """Tests for ugc_layout flowing from SyncService to DownloadConfig."""
+
+    def test_ugc_layout_defaults_to_unofficial(self, tmp_path: Path) -> None:
+        """ugc_layout should default to UgcLayout.UNOFFICIAL when not specified."""
+        service = SyncService(base_path=tmp_path, audio_format="opus")
+        assert service.ugc_layout == UgcLayout.UNOFFICIAL
+
+    def test_ugc_layout_passed_to_download_config(self, tmp_path: Path) -> None:
+        """ugc_layout should be forwarded to DownloadConfig.ugc_layout."""
+        service = SyncService(
+            base_path=tmp_path,
+            audio_format="opus",
+            ugc_layout=UgcLayout.CHANNEL,
+        )
+
+        with patch(
+            "yubal_api.services.sync_service.create_playlist_downloader"
+        ) as mock_create:
+            mock_create.return_value = None  # We only care about the config
+
+            # run() reports the None-downloader failure via SyncResult
+            service.run("https://example.com", None, CancelToken())
+
+            config = mock_create.call_args[0][0]
+            assert isinstance(config.download, DownloadConfig)
+            assert config.download.ugc_layout == UgcLayout.CHANNEL
